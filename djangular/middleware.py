@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+from django import http
 from django.core.handlers.wsgi import WSGIRequest
 from django.core.urlresolvers import reverse
 from django.utils.http import unquote
@@ -45,6 +46,17 @@ class DjangularUrlMiddleware(object):
             query = request.GET.copy()
             query.pop('djng_url_name', None)
             query.pop('djng_url_args', None)
+
+            for param in request.GET:
+                if param.startswith('djng_url_kwarg_'):
+                    query.pop(param, None)
+
+            if request.method == 'GET':
+                if query:
+                    url += '?%s' % (query.urlencode(), )
+                # TODO(simon) (Sep 10, 2015): Allow configuration of 301 vs 302?
+                return http.HttpResponsePermanentRedirect(url)
+
             request.environ['QUERY_STRING'] = query.urlencode()
             new_request = WSGIRequest(request.environ)
             request.__dict__ = new_request.__dict__
